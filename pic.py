@@ -1,4 +1,4 @@
-from PIL import Image, ImageColor, ImageDraw
+from PIL import Image, ImageColor, ImageDraw, ImageFont
 from math import ceil
 
 class Note:
@@ -75,6 +75,8 @@ class Chart:
         self.time = 0.0
         self.left_slide = False
         self.right_slide = False
+        self.bar_per_min = 0.0
+        self.time_offset = 0.0
 
 class Board:
     SIDE_BORDER = -0.2
@@ -109,6 +111,9 @@ class Board:
     BAR_LINE_COLOR = (127, 127, 127, 255)
     SPLIT_LINE_COLOR = (255, 255, 255, 255)
 
+    FONT_SIZE = 96
+    FONT_COLOR = (255, 255, 255, 255)
+
     def __init__(self, scale=0.5, time_limit: int=32, speed = 0.5, bar_span = 4):
         self.scale = scale
         self.notes = []
@@ -129,6 +134,28 @@ class Board:
         for i in range(pages):
             img.paste(page_img, (i * pagew, 0))
         draw = ImageDraw.Draw(img)
+
+        font_size = round(self.FONT_SIZE * self.scale)
+        font = ImageFont.truetype('Fonts/arial.ttf', size=font_size)
+
+        page_width, page_height, bar_height, bottom_line_y, side_line_leftside_x, side_line_left_x, side_line_right_x, side_line_rightside_x = args
+        for i in range(self.bar_span, pages * self.time_limit + self.bar_span, self.bar_span):
+            pg = int(i / self.time_limit)
+            x = page_width * pg
+            y = bottom_line_y - bar_height * self.scale * (i - pg * self.time_limit)
+            if i % self.time_limit != 0:
+                draw.line([(x, y), (x + page_width, y)], fill=self.BAR_LINE_COLOR, width=self.BAR_LINE_WIDTH)
+            time = round((i / chart.bar_per_min * 60 + chart.time_offset) * 1000)
+            h = time // 3600000
+            m = (time % 3600000) // 60000
+            s = (time % 60000) // 1000
+            ms = time % 1000
+            if h == 0:
+                text = "%02d:%02d:%03d" % (m, s, ms)
+            else:
+                text = "%02d:%02d:%02d:%03d" % (h, m, s, ms)
+            draw.text((x + side_line_left_x - font_size / 2, y - font_size), text, fill=self.FONT_COLOR, font=font, anchor='rm')
+
         for i in range(1, pages):
             draw.line([(i * pagew, 0), (i * pagew, pageh)], fill=self.SPLIT_LINE_COLOR, width=self.SPLIT_LINE_WIDTH)
         return img, args
@@ -140,7 +167,7 @@ class Board:
         ) * self.BOARD_SIZE * self.scale)
         page_bottom = round(self.BOARD_SIZE * (self.SIDE_BORDER - self.SIDE_LIMIT) * self.scale)
         bar_height = self.speed * self.TIME_SIZE
-        page_height = round((2 * page_bottom + bar_height * self.time_limit) * self.scale)
+        page_height = round(2 * page_bottom + (bar_height * self.time_limit) * self.scale)
 
         bottom_line_y = page_height - page_bottom
         side_line_leftside_x = round((self.SIDE_VISIBLE_CAP - self.SIDE_BORDER) * self.BOARD_SIZE * self.scale)
@@ -166,10 +193,6 @@ class Board:
         draw.line([(side_line_left_x, page_bottom), (side_line_left_x, bottom_line_y)], fill=self.LINE_COLOR, width=self.SIDE_LINE_WIDTH)
         draw.line([(side_line_right_x, page_bottom), (side_line_right_x, bottom_line_y)], fill=self.LINE_COLOR, width=self.SIDE_LINE_WIDTH)
         draw.line([(side_line_rightside_x, page_bottom), (side_line_rightside_x, bottom_line_y)], fill=self.LINE_COLOR, width=self.SIDE_LINE_WIDTH)
-
-        for i in range(self.bar_span, self.time_limit + 1, self.bar_span):
-            h = round(bottom_line_y - i * bar_height * self.scale)
-            draw.line([(0, h), (page_width, h)], fill=self.BAR_LINE_COLOR, width=self.BAR_LINE_WIDTH)
 
         return img, (page_width, page_height, bar_height, bottom_line_y, side_line_leftside_x, side_line_left_x, side_line_right_x, side_line_rightside_x)
 
@@ -203,7 +226,7 @@ class Board:
                 y = bottom_line_y - (note.start - page_number * self.time_limit) * bar_height
                 realx = round(x - img.width / 2)
                 if note.type == Note.NOTE_HOLD:
-                    realy = round(y - img.height - Note.WIDTH_HOLD / 2)
+                    realy = round(y - img.height + Note.WIDTH_HOLD / 2)
                 else:
                     realy = round(y - img.height / 2)
                 if note.type == Note.NOTE_HOLD:

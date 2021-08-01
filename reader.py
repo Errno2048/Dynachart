@@ -59,6 +59,9 @@ def read_dynamite(s):
         return None
 
     name, barpermin, timeoffset, leftpad, rightpad, mapid = m.groups()
+    barpermin, timeoffset = float(barpermin), float(timeoffset)
+    chart.bar_per_min = barpermin
+    chart.time_offset = timeoffset
     chart.left_slide = leftpad.lower() != 'pad'
     chart.right_slide = rightpad.lower() != 'pad'
     leftpos = s.find('m_notesLeft')
