@@ -34,3 +34,10 @@ python main.py [-s | --scale SCALE] [-S | --speed SPEED]
 
   Whether to print messages.
 
+#### Example
+
+```shell
+python main.py -v hemisphere.xml
+```
+
+To generate overview picture `hemisphere.png` for the chart `hemisphere.xml`.
