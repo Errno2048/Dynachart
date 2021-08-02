@@ -20,11 +20,11 @@ python main.py [-s | --scale SCALE] [-S | --speed SPEED]
 
 - Page limit
 
-  The maximum bars allowed to show per page. The value have to be an integer. Recommended value: 16.
+  The maximum bars allowed to show per page. The value has to be an integer. Recommended value: 16.
 
 - Bar span
 
-  The amount of bars between two bar lines.  The value have to be an integer. Recommended value: 2.
+  The amount of bars between two bar lines.  The value has to be an integer. Recommended value: 2.
 
 - Encoding
 
