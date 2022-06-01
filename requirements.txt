@@ -1,0 +1,4 @@
+Pillow
+UnityPy
+librosa
+pydub

@@ -249,7 +249,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=False)
 
     parser.add_argument('source', metavar='name', nargs=1, type=str, help='Android/data/com.c4cat.dynamix/files/UnityCache/Shared')
-    parser.add_argument('song', metavar='name', nargs='?', default=None, type=str, help='The song to be extracted.')
+    parser.add_argument('song', metavar='name', nargs='?', default=None, type=str, help='The song to be extracted. Show song list when not passed.')
     parser.add_argument('target', metavar='dir', nargs='?', default=None, type=str, help='The target directory.')
     parser.add_argument('--clip', '-c', metavar=('start', 'end'), type=float, nargs=2, default=None, help='To clip the chart and the song.')
     parser.add_argument('--fade', '-f', metavar='bar', type=float, default=1.0, help='To apply fade in and fade out.')
