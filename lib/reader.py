@@ -1,6 +1,6 @@
 import re
-import pic
-from pic import Note
+from lib import pic
+from lib.pic import Note
 import math
 
 

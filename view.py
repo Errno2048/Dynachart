@@ -1,9 +1,12 @@
-from reader import *
-from pic import Board
+from lib.reader import *
+from lib.pic import Board
 
 if __name__ == '__main__':
     import argparse
+    import json
     import os, sys
+
+    from lib.dynamix2dynamite import convert_json
 
     parser = argparse.ArgumentParser(add_help=False)
 
@@ -22,8 +25,10 @@ if __name__ == '__main__':
     if args.type == 'dynamite':
         reader = read_dynamite
     elif args.type == 'dynamix':
-        # TODO
-        pass
+        def dynamix_reader(s : str):
+            dic = json.loads(s)
+            return read_dynamite(convert_json(dic)[0])
+        reader = dynamix_reader
 
     for f in args.files:
         if not os.path.isfile(f):
