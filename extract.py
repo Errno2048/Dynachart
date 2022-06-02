@@ -248,9 +248,7 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
             note : dict
             m_time = note['m_time']
             if bar_start_time <= m_time and m_time <= bar_end_time:
-                note['m_time'] = round((m_time - max(0, bar_start_time - fade)) * 100000) / 100000
-                note['m_position'] = round(note['m_position'] * 100000) / 100000
-                note['m_width'] = round(note['m_width'] * 100000) / 100000
+                note['m_time'] = m_time - max(0, bar_start_time - fade)
                 new_notes.append(note)
                 if note['m_type'] == 2:
                     # hold
