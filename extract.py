@@ -143,11 +143,11 @@ def extract(song_dict, src, dst, preserve_wav=False, generate=True):
     file_cover, image_cover = extract_cover(f'{src}/{path_cover}')
 
     image_cover : Image.Image
-    image_cover.save(f'{dst}/{file_cover}.png')
     file_song = f'{dst}/{_file_song}'
     file_preview = f'{dst}/{_file_preview}'
 
     if generate:
+        image_cover.save(f'{dst}/{file_cover}.png')
         with open(file_song, 'wb') as f:
             f.write(data_song)
         with open(file_preview, 'wb') as f:
