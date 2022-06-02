@@ -56,6 +56,32 @@ def get_songlist(folder):
                 break
     assert dic_m_list is not None, 'Corrupted song list file'
     songlist = dic_m_list['Songs']
+
+    map_calibration_folder = f'{folder}/_mapcal'
+    map_calibration_file = get_source_file(map_calibration_folder)
+    src = unity.load(map_calibration_file)
+    songs_cal = None
+    maps_cal = None
+    for obj in src.objects:
+        if obj.type.name == 'MonoBehaviour' and obj.serialized_type.nodes:
+            dic = obj.read_typetree()
+            if dic['m_Name'] == 'MapCalibrationList':
+                songs_cal = {}
+                maps_cal = {}
+                for songs_dic in dic['songs']:
+                    songs_cal[songs_dic['id']] = songs_dic['offset']
+                for maps_dic in dic['maps']:
+                    maps_cal[maps_dic['id']] = maps_dic['offset']
+                break
+    assert songs_cal is not None, 'Corrupted calibration file'
+    for song_dict in songlist:
+        song_name = song_dict['id']
+        cal = songs_cal.get(song_name, 0.0)
+        song_dict['offset'] = cal
+        for map_dict in song_dict['Maps']:
+            map_name = map_dict['id']
+            map_cal = maps_cal.get(map_name, None)
+            map_dict['offset'] = map_cal
     return songlist
 
 def extract_song(path):
@@ -98,6 +124,8 @@ def extract(song_dict, src, dst):
     path_preview = song_dict['PreviewAudio']['id']
     path_cover = song_dict['Cover']['id']
 
+    song_offset = song_dict['offset']
+
     name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
     name_preview, _file_preview, data_preview = extract_song(f'{src}/{path_preview}')
     file_cover, image_cover = extract_cover(f'{src}/{path_cover}')
@@ -112,9 +140,9 @@ def extract(song_dict, src, dst):
         f.write(data_preview)
 
     wav_song = pydub.AudioSegment.from_wav(file_song)
-    wav_song.export(f'{dst}/{name_song}.mp3', format='mp3')
+    wav_song.export(f'{dst}/{name_song}.mp3', format='mp3', parameters=["-write_xing", "0"])
     wav_preview = pydub.AudioSegment.from_wav(file_preview)
-    wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3')
+    wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3', parameters=["-write_xing", "0"])
 
     maps = song_dict['Maps']
     res_maps = []
@@ -123,8 +151,12 @@ def extract(song_dict, src, dst):
         map_level = _map['level']
         map_level_name = _map['LevelName']
         map_dict = extract_map(f'{src}/{map_id}')
+        map_offset = _map['offset']
+        if map_offset is None:
+            map_offset = map_dict['m_timeOffset']
+        map_dict['m_timeOffset'] = map_offset + song_offset
         with open(f'{dst}/{map_id}.json', 'w') as f:
-            json.dump(map_dict, f)
+            json.dump(map_dict, f, indent=2)
         map_xml, _ = convert_json(map_dict)
         with open(f'{dst}/{map_id}_{map_level}.xml', 'w') as f:
             f.write(map_xml)
@@ -203,9 +235,9 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
     file_song = f'{dst}/{_file_song}'
     soundfile.write(file_song, clip_song, sr)
     wav_song = pydub.AudioSegment.from_wav(file_song)
-    wav_song.export(f'{dst}/{name_song}.mp3', format='mp3')
+    wav_song.export(f'{dst}/{name_song}.mp3', format='mp3', parameters=["-write_xing", "0"])
     wav_preview = pydub.AudioSegment.from_wav(file_preview)
-    wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3')
+    wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3', parameters=["-write_xing", "0"])
 
     map_dict = map_dict.copy()
     for note_name in ('m_notes', 'm_notesLeft', 'm_notesRight'):
@@ -240,7 +272,7 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
         map_dict[note_name]['m_notes'] = new_notes
 
     with open(f'{dst}/{map_id}.json', 'w') as f:
-        json.dump(map_dict, f)
+        json.dump(map_dict, f, indent=2)
     map_xml, _ = convert_json(map_dict)
     with open(f'{dst}/{map_id}_{map_level}.xml', 'w') as f:
         f.write(map_xml)
@@ -253,7 +285,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=False)
 
     parser.add_argument('source', metavar='name', nargs=1, type=str, help='Android/data/com.c4cat.dynamix/files/UnityCache/Shared')
-    parser.add_argument('song', metavar='name', nargs='?', default=None, type=str, help='The song to be extracted. Show song list when not passed.')
+    parser.add_argument('song', metavar='name', nargs='?', default=None, type=str, help='The song to be extracted. Pass \'/\' to extract all songs. Show song list when not passed.')
     parser.add_argument('target', metavar='dir', nargs='?', default=None, type=str, help='The target directory.')
     parser.add_argument('--view', '-v', action='store_true', help='Whether to export preview image for each chart.')
     parser.add_argument('--clip', '-c', metavar=('start', 'end'), type=float, nargs=2, default=None, help='To clip the chart and the song.')
@@ -276,29 +308,23 @@ if __name__ == '__main__':
             name = song_info['Name']
             lvs = ['-' for i in range(5)]
             maps = song_info['Maps']
+            has_map = False
             if maps:
                 for map_info in maps:
                     lv = map_info['LevelName']
                     if lv < 5:
+                        has_map = True
                         lvs[lv] = _Map_level_desc[lv]
+            if has_map:
                 print(f'{index}:{"".join(lvs)}:{id_name}:"{name}"')
     else:
-        target = args.target
-        if target is None:
-            target = f'{os.path.abspath(os.path.curdir)}/{song}'
-        song_index = None
-        for index, song_info in enumerate(songlist):
-            id_name = song_info['id'][6:]
-            name = song_info['Name']
-            if id_name == song or name == song:
-                song_index = index
-                break
-        if song_index is None:
-            print(f'Cannot find {song}.')
-        else:
-            s = songlist[song_index]
-            if args.clip is None:
-                res = extract(s, src, target)
+        if song == '/':
+            target = args.target
+            if target is None:
+                target = f'{os.path.abspath(os.path.curdir)}'
+            for index, song_info in enumerate(songlist):
+                id_name = song_info['id'][6:]
+                res = extract(song_info, src, f'{target}/{id_name}')
                 if args.view:
                     for _res_map in res['maps']:
                         _map = _res_map['map']
@@ -307,12 +333,37 @@ if __name__ == '__main__':
                         board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
                         img = board.generate(chart)
                         img.save(os.path.join(target, _map['m_mapID'] + '.png'))
+        else:
+            target = args.target
+            if target is None:
+                target = f'{os.path.abspath(os.path.curdir)}/{song}'
+            song_index = None
+            for index, song_info in enumerate(songlist):
+                id_name = song_info['id'][6:]
+                name = song_info['Name']
+                if id_name == song or name == song:
+                    song_index = index
+                    break
+            if song_index is None:
+                print(f'Cannot find {song}.')
             else:
-                clip_start, clip_end = args.clip
-                _map = extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level)
-                if args.view:
-                    chart = read_dynamix(_map)
+                s = songlist[song_index]
+                if args.clip is None:
+                    res = extract(s, src, target)
+                    if args.view:
+                        for _res_map in res['maps']:
+                            _map = _res_map['map']
+                            chart = read_dynamix(_map)
 
-                    board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
-                    img = board.generate(chart)
-                    img.save(os.path.join(target, _map['m_mapID'] + '.png'))
+                            board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
+                            img = board.generate(chart)
+                            img.save(os.path.join(target, _map['m_mapID'] + '.png'))
+                else:
+                    clip_start, clip_end = args.clip
+                    _map = extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level)
+                    if args.view:
+                        chart = read_dynamix(_map)
+
+                        board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
+                        img = board.generate(chart)
+                        img.save(os.path.join(target, _map['m_mapID'] + '.png'))
