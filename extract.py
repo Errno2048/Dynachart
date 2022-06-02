@@ -6,6 +6,7 @@ import soundfile
 import numpy as np
 import os
 import json
+from tqdm import tqdm
 
 from lib.dynamix2dynamite import convert_json
 from lib.reader import read_dynamix
@@ -114,7 +115,7 @@ def extract_map(path):
                 return obj
     assert False, f'Cannot find MonoBehaviour with m_notes in {path}'
 
-def extract(song_dict, src, dst):
+def extract(song_dict, src, dst, preserve_wav=False, generate=True):
     if not os.path.isdir(dst):
         if os.path.isfile(dst):
             os.remove(dst)
@@ -133,16 +134,22 @@ def extract(song_dict, src, dst):
     image_cover : Image.Image
     image_cover.save(f'{dst}/{file_cover}.png')
     file_song = f'{dst}/{_file_song}'
-    with open(file_song, 'wb') as f:
-        f.write(data_song)
     file_preview = f'{dst}/{_file_preview}'
-    with open(file_preview, 'wb') as f:
-        f.write(data_preview)
 
-    wav_song = pydub.AudioSegment.from_wav(file_song)
-    wav_song.export(f'{dst}/{name_song}.mp3', format='mp3', parameters=["-write_xing", "0"])
-    wav_preview = pydub.AudioSegment.from_wav(file_preview)
-    wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3', parameters=["-write_xing", "0"])
+    if generate:
+        with open(file_song, 'wb') as f:
+            f.write(data_song)
+        with open(file_preview, 'wb') as f:
+            f.write(data_preview)
+
+        wav_song = pydub.AudioSegment.from_wav(file_song)
+        wav_song.export(f'{dst}/{name_song}.mp3', format='mp3', parameters=["-write_xing", "0"])
+        wav_preview = pydub.AudioSegment.from_wav(file_preview)
+        wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3', parameters=["-write_xing", "0"])
+
+        if not preserve_wav:
+            os.remove(file_song)
+            os.remove(file_preview)
 
     maps = song_dict['Maps']
     res_maps = []
@@ -155,11 +162,12 @@ def extract(song_dict, src, dst):
         if map_offset is None:
             map_offset = map_dict['m_timeOffset']
         map_dict['m_timeOffset'] = map_offset + song_offset
-        with open(f'{dst}/{map_id}.json', 'w') as f:
-            json.dump(map_dict, f, indent=2)
-        map_xml, _ = convert_json(map_dict)
-        with open(f'{dst}/{map_id}_{map_level}.xml', 'w') as f:
-            f.write(map_xml)
+        if generate:
+            map_xml, _ = convert_json(map_dict)
+            with open(f'{dst}/{map_id}.json', 'w', encoding='utf8') as f:
+                json.dump(map_dict, f, indent=2)
+            with open(f'{dst}/{map_id}_{map_level}.xml', 'w', encoding='utf8') as f:
+                f.write(map_xml)
         res_maps.append({
             'id': map_id,
             'level': map_level,
@@ -185,13 +193,13 @@ def extract(song_dict, src, dst):
         'maps': res_maps,
     }
 
-def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, align=64, use_bar=True):
+def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, align=64, use_bar=True, preserve_wav=False):
     if not os.path.isdir(dst):
         if os.path.isfile(dst):
             os.remove(dst)
         os.makedirs(dst)
 
-    data = extract(song_dict, src, f'{dst}_origin')
+    data = extract(song_dict, src, f'{dst}_origin', preserve_wav=preserve_wav, generate=False)
     name_song, _file_song, data_song = data['song']['name'], data['song']['file'], data['song']['data']
     name_preview, _file_preview, data_preview = data['preview']['name'], data['preview']['file'], data['preview']['data']
     file_cover, image_cover = data['cover']['name'], data['cover']['data']
@@ -239,6 +247,11 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
     wav_preview = pydub.AudioSegment.from_wav(file_preview)
     wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3', parameters=["-write_xing", "0"])
 
+    if not preserve_wav:
+        os.remove(file_song)
+        os.remove(file_preview)
+        os.remove(file_song_origin)
+
     map_dict = map_dict.copy()
     for note_name in ('m_notes', 'm_notesLeft', 'm_notesRight'):
         notes = map_dict[note_name]['m_notes']
@@ -269,10 +282,10 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
                 hold['m_subId'] = -1
         map_dict[note_name]['m_notes'] = new_notes
 
-    with open(f'{dst}/{map_id}.json', 'w') as f:
+    with open(f'{dst}/{map_id}.json', 'w', encoding='utf8') as f:
         json.dump(map_dict, f, indent=2)
     map_xml, _ = convert_json(map_dict)
-    with open(f'{dst}/{map_id}_{map_level}.xml', 'w') as f:
+    with open(f'{dst}/{map_id}_{map_level}.xml', 'w', encoding='utf8') as f:
         f.write(map_xml)
 
     return map_dict
@@ -290,8 +303,12 @@ if __name__ == '__main__':
     parser.add_argument('--fade', '-f', metavar='bar', type=float, default=1.0, help='To apply fade in and fade out.')
     parser.add_argument('--align', '-a', metavar='a', type=float, default=4.0, help='To align with 1/a bar size.')
     parser.add_argument('--level', '-l', metavar='lv', type=int, default=None, help='The chart level to be clipped. Casual is 0 and Giga is 4. The highest level will be automatically chosen if not provided.')
+    parser.add_argument('--preserve-wave', '-p', action='store_true', help='To preserve .wav files.')
+    parser.add_argument('--skip', '-s', action='store_true', help='To skip extracted songs when extracting all songs.')
 
     args = parser.parse_args()
+
+    preserve_wav = args.preserve_wave
 
     src = args.source[0]
     songlist = get_songlist(src)
@@ -320,11 +337,25 @@ if __name__ == '__main__':
             target = args.target
             if target is None:
                 target = f'{os.path.abspath(os.path.curdir)}'
-            for index, song_info in enumerate(songlist):
-                id_name = song_info['id'][6:]
-                if not os.path.isdir(f'{target}/{id_name}'):
+            if args.skip:
+                index = 0
+                for index, song_info in enumerate(songlist):
+                    _id = song_info['id']
+                    id_name = _id[6:]
+                    if not os.path.isdir(f'{target}/{id_name}'):
+                        break
+                index = max(index - 1, 0)
+                songlist = songlist[index:]
+            gen = tqdm(enumerate(songlist), total=len(songlist))
+            for index, song_info in gen:
+                _id = song_info['id']
+                id_name = _id[6:]
+                gen.set_postfix({
+                    'name': id_name,
+                })
+                if not os.path.isdir(f'{src}/{_id}'):
                     continue
-                res = extract(song_info, src, f'{target}/{id_name}')
+                res = extract(song_info, src, f'{target}/{id_name}', preserve_wav=preserve_wav)
                 if args.view:
                     for _res_map in res['maps']:
                         _map = _res_map['map']
@@ -349,7 +380,7 @@ if __name__ == '__main__':
             else:
                 s = songlist[song_index]
                 if args.clip is None:
-                    res = extract(s, src, target)
+                    res = extract(s, src, target, preserve_wav=preserve_wav)
                     if args.view:
                         for _res_map in res['maps']:
                             _map = _res_map['map']
@@ -360,7 +391,7 @@ if __name__ == '__main__':
                             img.save(os.path.join(target, _map['m_mapID'] + '.png'))
                 else:
                     clip_start, clip_end = args.clip
-                    _map = extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level)
+                    _map = extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level, preserve_wav=preserve_wav)
                     if args.view:
                         chart = read_dynamix(_map)
 
