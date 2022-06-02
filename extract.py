@@ -122,12 +122,23 @@ def extract(song_dict, src, dst, preserve_wav=False, generate=True):
         os.makedirs(dst)
 
     path_song = song_dict['id']
+    if path_song == '_song_stardust' or path_song == '_song_stardust2':
+        # stardust is located in _wavetest_s1c1
+        path_song = '_wavetest_s1c1'
     path_preview = song_dict['PreviewAudio']['id']
     path_cover = song_dict['Cover']['id']
 
     song_offset = song_dict['offset']
 
-    name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
+    try:
+        name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
+    except:
+        if path_song and path_song[-1] == '2':
+            path_song = path_song[:-1]
+            name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
+        else:
+            path_song = path_song + '_2'
+            name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
     name_preview, _file_preview, data_preview = extract_song(f'{src}/{path_preview}')
     file_cover, image_cover = extract_cover(f'{src}/{path_cover}')
 
@@ -148,8 +159,14 @@ def extract(song_dict, src, dst, preserve_wav=False, generate=True):
         wav_preview.export(f'{dst}/{name_preview}.mp3', format='mp3', parameters=["-write_xing", "0"])
 
         if not preserve_wav:
-            os.remove(file_song)
-            os.remove(file_preview)
+            try:
+                os.remove(file_song)
+            except:
+                pass
+            try:
+                os.remove(file_preview)
+            except:
+                pass
 
     maps = song_dict['Maps']
     res_maps = []
@@ -337,6 +354,7 @@ if __name__ == '__main__':
             target = args.target
             if target is None:
                 target = f'{os.path.abspath(os.path.curdir)}'
+            songlist = list(filter(lambda x: x['id'][:6] == '_song_', songlist))
             if args.skip:
                 index = 0
                 for index, song_info in enumerate(songlist):
@@ -353,9 +371,13 @@ if __name__ == '__main__':
                 gen.set_postfix({
                     'name': id_name,
                 })
-                if not os.path.isdir(f'{src}/{_id}'):
+                try:
+                    res = extract(song_info, src, f'{target}/{id_name}', preserve_wav=preserve_wav)
+                except Exception as e:
+                    if isinstance(e, KeyboardInterrupt):
+                        raise
+                    print(f'Skipped {id_name}')
                     continue
-                res = extract(song_info, src, f'{target}/{id_name}', preserve_wav=preserve_wav)
                 if args.view:
                     for _res_map in res['maps']:
                         _map = _res_map['map']
