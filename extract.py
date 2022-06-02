@@ -322,6 +322,8 @@ if __name__ == '__main__':
                 target = f'{os.path.abspath(os.path.curdir)}'
             for index, song_info in enumerate(songlist):
                 id_name = song_info['id'][6:]
+                if not os.path.isdir(f'{target}/{id_name}'):
+                    continue
                 res = extract(song_info, src, f'{target}/{id_name}')
                 if args.view:
                     for _res_map in res['maps']:
