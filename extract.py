@@ -116,10 +116,11 @@ def extract_map(path):
     assert False, f'Cannot find MonoBehaviour with m_notes in {path}'
 
 def extract(song_dict, src, dst, preserve_wav=False, generate=True):
-    if not os.path.isdir(dst):
-        if os.path.isfile(dst):
-            os.remove(dst)
-        os.makedirs(dst)
+    if generate:
+        if not os.path.isdir(dst):
+            if os.path.isfile(dst):
+                os.remove(dst)
+            os.makedirs(dst)
 
     path_song = song_dict['id']
     if path_song == '_song_stardust' or path_song == '_song_stardust2':
