@@ -8,6 +8,8 @@ import os
 import json
 
 from lib.dynamix2dynamite import convert_json
+from lib.reader import read_dynamix
+from lib.pic import Board
 
 def wav_file_clip(path, start, end, fadein=None, fadeout=None, sr=None):
     audio, sample_rate = librosa.load(path, sr=sr)
@@ -243,6 +245,8 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
     with open(f'{dst}/{map_id}_{map_level}.xml', 'w') as f:
         f.write(map_xml)
 
+    return map_dict
+
 if __name__ == '__main__':
     import argparse
 
@@ -251,6 +255,7 @@ if __name__ == '__main__':
     parser.add_argument('source', metavar='name', nargs=1, type=str, help='Android/data/com.c4cat.dynamix/files/UnityCache/Shared')
     parser.add_argument('song', metavar='name', nargs='?', default=None, type=str, help='The song to be extracted. Show song list when not passed.')
     parser.add_argument('target', metavar='dir', nargs='?', default=None, type=str, help='The target directory.')
+    parser.add_argument('--view', '-v', action='store_true', help='Whether to export preview image for each chart.')
     parser.add_argument('--clip', '-c', metavar=('start', 'end'), type=float, nargs=2, default=None, help='To clip the chart and the song.')
     parser.add_argument('--fade', '-f', metavar='bar', type=float, default=1.0, help='To apply fade in and fade out.')
     parser.add_argument('--align', '-a', metavar='a', type=float, default=4.0, help='To align with 1/a bar size.')
@@ -264,10 +269,19 @@ if __name__ == '__main__':
     song = args.song
 
     if song is None:
+        _Map_level_desc = ['C', 'N', 'H', 'M', 'G', 'T']
+
         for index, song_info in enumerate(songlist):
             id_name = song_info['id'][6:]
             name = song_info['Name']
-            print(f'{index}:{id_name}:"{name}"')
+            lvs = ['-' for i in range(5)]
+            maps = song_info['Maps']
+            if maps:
+                for map_info in maps:
+                    lv = map_info['LevelName']
+                    if lv < 5:
+                        lvs[lv] = _Map_level_desc[lv]
+                print(f'{index}:{"".join(lvs)}:{id_name}:"{name}"')
     else:
         target = args.target
         if target is None:
@@ -284,7 +298,21 @@ if __name__ == '__main__':
         else:
             s = songlist[song_index]
             if args.clip is None:
-                extract(s, src, target)
+                res = extract(s, src, target)
+                if args.view:
+                    for _res_map in res['maps']:
+                        _map = _res_map['map']
+                        chart = read_dynamix(_map)
+
+                        board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
+                        img = board.generate(chart)
+                        img.save(os.path.join(target, _map['m_mapID'] + '.png'))
             else:
                 clip_start, clip_end = args.clip
-                extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level)
+                _map = extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level)
+                if args.view:
+                    chart = read_dynamix(_map)
+
+                    board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
+                    img = board.generate(chart)
+                    img.save(os.path.join(target, _map['m_mapID'] + '.png'))

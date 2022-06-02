@@ -151,9 +151,9 @@ class Board:
             s = (time % 60000) // 1000
             ms = time % 1000
             if h == 0:
-                text = "%02d:%02d:%03d" % (m, s, ms)
+                text = "%02d:%02d:%03d %d" % (m, s, ms, i)
             else:
-                text = "%02d:%02d:%02d:%03d" % (h, m, s, ms)
+                text = "%02d:%02d:%02d:%03d %d" % (h, m, s, ms, i)
             draw.text((x + side_line_left_x - font_size / 2, y - font_size), text, fill=self.FONT_COLOR, font=font, anchor='rm')
 
         for i in range(1, pages):

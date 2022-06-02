@@ -1,17 +1,17 @@
 from lib.reader import *
 from lib.pic import Board
+import json
+from xml.etree import ElementTree
 
 if __name__ == '__main__':
     import argparse
     import json
     import os, sys
 
-    from lib.dynamix2dynamite import convert_json
-
     parser = argparse.ArgumentParser(add_help=False)
 
     parser.add_argument('files', metavar='name', nargs='*', type=str)
-    parser.add_argument('--type', '-t', choices=('dynamite', 'dynamix'), type=str, default=None)
+    #parser.add_argument('--type', '-t', choices=('dynamite', 'dynamix'), type=str, default=None)
     parser.add_argument('--scale', '-s', type=float, default=0.4)
     parser.add_argument('--speed', '-S', type=float, default=0.8)
     parser.add_argument('--page_limit', '-l', type=int, default=16)
@@ -20,15 +20,6 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', action='store_true', default=False)
 
     args = parser.parse_args()
-
-    reader = read_dynamite
-    if args.type == 'dynamite':
-        reader = read_dynamite
-    elif args.type == 'dynamix':
-        def dynamix_reader(s : str):
-            dic = json.loads(s)
-            return read_dynamite(convert_json(dic)[0])
-        reader = dynamix_reader
 
     for f in args.files:
         if not os.path.isfile(f):
@@ -44,7 +35,10 @@ if __name__ == '__main__':
             else:
                 ftarget = fname + '.png'
             with open(f, 'r', encoding=args.encoding) as F:
-                chart = reader(F.read())
+                chart = F.read()
+
+            chart = read(chart)
+
             board = Board(scale=args.scale, time_limit=args.page_limit, speed=args.speed, bar_span=args.bar_span)
             img = board.generate(chart)
             img.save(os.path.join(os.path.dirname(f), ftarget))
