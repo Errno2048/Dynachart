@@ -178,9 +178,10 @@ def extract(song_dict, src, dst, preserve_wav=False, generate=True):
         map_dict = extract_map(f'{src}/{map_id}')
         map_offset = _map['offset']
         if map_offset is None:
-            map_offset = map_dict['m_timeOffset']
-        if map_offset == 0.0:
-            map_offset = song_offset
+            if song_offset:
+                map_offset = song_offset
+            else:
+                map_offset = map_dict['m_timeOffset']
         map_dict['m_timeOffset'] = map_offset
         if generate:
             map_xml, _ = convert_json(map_dict)
