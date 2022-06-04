@@ -389,7 +389,7 @@ if __name__ == '__main__':
 
                         board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
                         img = board.generate(chart)
-                        img.save(os.path.join(target, _map['m_mapID'] + '.png'))
+                        img.save(os.path.join(target, id_name, _map['m_mapID'] + '.png'))
         else:
             target = args.target
             if target is None:

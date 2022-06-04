@@ -18,6 +18,7 @@ class Note:
     WIDTH_NORMAL = 16
     WIDTH_CHAIN = 8
     WIDTH_HOLD = 16
+    WIDTH_MIN = 8
 
     def __lt__(self, other):
         res = self.start - other.start
@@ -64,6 +65,8 @@ class Note:
             height = bar_height * (self.end - self.start) + self.WIDTH_HOLD
             radius = self.WIDTH_HOLD / 2
         width, height, radius = round(width), round(height), round(radius)
+        width = max(width, self.WIDTH_MIN)
+        height = max(height, self.WIDTH_MIN)
         img = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         draw.rounded_rectangle([(0, 0), (width, height)], radius, fill_color, outline_color, line_width)
