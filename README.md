@@ -39,7 +39,7 @@ python view.py [-s | --scale SCALE] [-S | --speed SPEED]
 ### Example
 
 ```shell
-python main.py -v hemisphere.xml
+python view.py -v hemisphere.xml
 ```
 
 To generate overview picture `hemisphere.png` for the chart `hemisphere.xml`.
