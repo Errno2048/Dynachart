@@ -85,12 +85,14 @@ def get_songlist(folder):
             map_dict['offset'] = map_cal
     return songlist
 
-def extract_song(path):
+def extract_song(path, filter_preview=False):
     file = get_source_file(path)
     src = unity.load(file)
     for obj in src.objects:
         if obj.type.name == 'AudioClip':
             obj = obj.read()
+            if filter_preview and obj.name[:8] == '_preview':
+                continue
             samples = obj.samples
             assert len(samples) == 1, f'Invalid AudioClip samples with size {len(samples)}'
             return (obj.name, *list(samples.items())[0])
@@ -132,14 +134,14 @@ def extract(song_dict, src, dst, preserve_wav=False, generate=True):
     song_offset = song_dict['offset']
 
     try:
-        name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
+        name_song, _file_song, data_song = extract_song(f'{src}/{path_song}', filter_preview=True)
     except:
         if path_song and path_song[-1] == '2':
             path_song = path_song[:-1]
-            name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
+            name_song, _file_song, data_song = extract_song(f'{src}/{path_song}', filter_preview=True)
         else:
             path_song = path_song + '_2'
-            name_song, _file_song, data_song = extract_song(f'{src}/{path_song}')
+            name_song, _file_song, data_song = extract_song(f'{src}/{path_song}', filter_preview=True)
     name_preview, _file_preview, data_preview = extract_song(f'{src}/{path_preview}')
     file_cover, image_cover = extract_cover(f'{src}/{path_cover}')
 

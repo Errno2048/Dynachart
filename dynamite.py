@@ -34,16 +34,18 @@ _Re_read_chart_dir_preview = re.compile(r'^_?preview')
 
 def _diff2lvname(s):
     s = s.upper()
-    if s == 'B' or s == 'C':
+    if s == 'B' or s == 'C' or s == '1':
         return '1CASUAL'
-    if s == 'N':
+    if s == 'N' or s == '2':
         return '2NORMAL'
-    if s == 'H':
+    if s == 'H' or s == '3':
         return '3HARD'
-    if s == 'M':
+    if s == 'M' or s == '4':
         return '4MEGA'
-    if s == 'G':
+    if s == 'G' or s == '5':
         return '5GIGA'
+    if s == 'T' or s == '6':
+        return '6TERA'
     return '0TUTORIAL'
 
 def read_chart_dir(src, name, *, artist=None, charter=None, desc=None, id=None, ranked=False, with_dir=True):
@@ -74,6 +76,22 @@ def read_chart_dir(src, name, *, artist=None, charter=None, desc=None, id=None, 
                 preview = name
             else:
                 song = name
+        elif _ext == '.rnx':
+            subext = name[-9:-4]
+            if subext[0] == 'a':
+                song = name
+            elif subext[0] == 'b':
+                preview = name
+            elif subext[0] == 'c':
+                cover = name
+            elif subext[1:] == '.xml':
+                lv = 0
+                diff = subext[0]
+                charts.append({
+                    'difficulty': _diff2lvname(diff),
+                    'level': lv,
+                    'file': f'{dir_name}/{name}' if with_dir else name,
+                })
         else:
             if re.search(_Re_read_chart_dir_cover, name):
                 cover = name
@@ -209,15 +227,15 @@ def sort_out(lst, src, dst, rename=False):
         new_dic['charts'] = new_charts
         new_lst.append(new_dic)
     new_list_file = json_dict_to_list_file(new_lst)
-    with open(os.path.join(abs_dst, '__rena_index_2'), 'w') as f:
+    with open(os.path.join(abs_dst, '__rena_index_2'), 'w', encoding='utf8') as f:
         f.write(new_list_file)
-    with open(os.path.join(abs_dst, '__rena_index_2.json'), 'w') as f:
+    with open(os.path.join(abs_dst, '__rena_index_2.json'), 'w', encoding='utf8') as f:
         json.dump(new_lst, f, indent=2)
     return new_lst
 
 def get_list(src):
     abs_src = os.path.abspath(src)
-    with open(os.path.join(abs_src, '__rena_index_2'), 'r') as f:
+    with open(os.path.join(abs_src, '__rena_index_2'), 'r', encoding='utf8') as f:
         s_list = f.read()
     lst = read_list(s_list)
     return lst
@@ -242,7 +260,7 @@ def merge_list(src1, src2):
         for f in (dic['song'], dic['cover'], dic['preview'], *chart_files):
             force_copy(os.path.join(src2, f), os.path.join(src1, f))
         lst1.append(dic)
-    with open(os.path.join(src1, '__rena_index_2'), 'w') as f:
+    with open(os.path.join(src1, '__rena_index_2'), 'w', encoding='utf8') as f:
         f.write(json_dict_to_list_file(lst1))
     return lst1
 
@@ -291,9 +309,22 @@ if __name__ == '__main__':
     elif command == 'list':
         lst = get_list(source)
         target_file = os.path.join(source, '__rena_index_2.json')
-        with open(target_file, 'w') as f:
+        with open(target_file, 'w', encoding='utf8') as f:
             json.dump(lst, f, indent=2)
         print(f'JSON output to {target_file}')
+    elif command == 'relist':
+        dirs = os.listdir(source)
+        lst = []
+        for _dir in dirs:
+            path_dir = os.path.join(source, _dir)
+            if os.path.isdir(path_dir):
+                item = read_chart_dir(path_dir, _dir)
+                if item:
+                    lst.append(item)
+                else:
+                    print(f'Skipped {_dir}')
+        with open(os.path.join(source, '__rena_index_2'), 'w', encoding='utf8') as f:
+            f.write(json_dict_to_list_file(lst))
     elif command == 'import':
         import_args = import_parser.parse_args(rest_args)
 
@@ -319,7 +350,7 @@ if __name__ == '__main__':
             force_remove(target)
             shutil.copytree(import_args.source, target)
             lst.append(new_item)
-            with open(os.path.join(source, '__rena_index_2'), 'w') as f:
+            with open(os.path.join(source, '__rena_index_2'), 'w', encoding='utf8') as f:
                 f.write(json_dict_to_list_file(lst))
 
     elif command == 'remove':
@@ -332,7 +363,7 @@ if __name__ == '__main__':
             if dic['id'] not in remove_ids:
                 new_lst.append(dic)
 
-        with open(os.path.join(source, '__rena_index_2'), 'w') as f:
+        with open(os.path.join(source, '__rena_index_2'), 'w', encoding='utf8') as f:
             f.write(json_dict_to_list_file(new_lst))
     elif command == 'merge':
         merge_args = merge_parser.parse_args(rest_args)

@@ -60,6 +60,14 @@ python dynamite.py list source
 
 To generate JSON file for Dynamite chart list. `source` is the path for Dynamite source folder (`/Android/data/tech.dynami.dynamite/files`).
 
+### relist
+
+```shell
+python dynamite.py relist source
+```
+
+To generate Dynamite chart list by scanning the folder. `source` is the path for the folder.
+
 ### sort
 
 ```shell
@@ -83,12 +91,12 @@ To import a song into Dynamite.
 
 `song_folder` is the source folder of the song, in which the following files exist.
 
-- A cover picture whose name starts with `cover`, `_cover` or `_ocover`.
-- A preview audio file started with `preview` or `_preview`.
-- Another audio file as the full song.
-- XML charts ends with `_X.xml` or `_X_L.xml`, where `X` is the difficulty (`B` or `C`, `N`, `H`, `M` or `G`) and `L` is the level. For example, `Hemisphere_M_14.xml`.
+- A cover picture whose name starts with `cover`, `_cover` or `_ocover` or ends with `c.jpg.rnx`.
+- A preview audio file started with `preview` or `_preview` or ended with `b.mp3.rnx`.
+- Another audio file or a file ended with `a.mp3.rnx` as the full song.
+- XML charts ending with `_X.xml` or `_X_L.xml`, where `X` is the difficulty (`B` or `C`, `N`, `H`, `M`, `G` or `T`) and `L` is the level. For example, `Hemisphere_M_14.xml`. `X.xml.rnx` is also considered.
 
-`ID`, `ARTIST`, `CHARTER` and `DESC` stands for the song ID, the artist, the charter and description, respectively.
+`ID`, `ARTIST`, `CHARTER` and `DESC` stand for the song ID, the artist, the charter and description, respectively.
 
 `--ranked` indicates that the song is ranked.
 
