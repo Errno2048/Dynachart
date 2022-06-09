@@ -63,10 +63,12 @@ To generate JSON file for Dynamite chart list. `source` is the path for Dynamite
 ### sort
 
 ```shell
-python dynamite.py sort source target
+python dynamite.py sort source target [-r | --rename]
 ```
 
 To move files for each song into corresponding folder. `source` is the path for Dynamite source folder and `target` is the target folder, where the generated files are.
+
+Add `--rename` to rename song IDs.
 
 ### import
 
