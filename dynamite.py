@@ -139,6 +139,17 @@ def force_remove(path):
     elif os.path.isdir(path):
         shutil.rmtree(path)
 
+def force_copy(src, dst):
+    if not os.path.exists(src):
+        return
+    parent_dir = os.path.dirname(os.path.abspath(dst))
+    force_mkdir(parent_dir)
+    force_remove(dst)
+    if os.path.isfile(src):
+        shutil.copyfile(src, dst)
+    else:
+        shutil.copytree(src, dst)
+
 def json_dict_to_list_file(lst):
     res = []
     for dic in lst:
@@ -165,15 +176,19 @@ def json_dict_to_list_file(lst):
     res.append('')
     return '\n'.join(res)
 
-def sort_out(lst, src, dst):
+def _id_rename(dic):
+    return path_escape(f'{dic["name"]}_{dic["charter"]}')
+
+def sort_out(lst, src, dst, rename=False):
     abs_src = os.path.abspath(src)
     abs_dst = os.path.abspath(dst)
     new_lst = []
     for dic in lst:
         new_dic = dic.copy()
-        id_ = dic['id']
+        id_ = _id_rename(dic) if rename else dic['id']
+        new_dic['id'] = id_
         name = dic['name']
-        dst_folder = path_escape(f'{name}_{id_}')
+        dst_folder = id_
         song, cover, preview = dic['song'], dic['cover'], dic['preview']
         charts = dic['charts']
         chart_files = []
@@ -207,9 +222,29 @@ def get_list(src):
     lst = read_list(s_list)
     return lst
 
-def sort_dir(src, dst):
+def sort_dir(src, dst, rename=False):
     lst = get_list(src)
-    return sort_out(lst, src, dst)
+    return sort_out(lst, src, dst, rename=rename)
+
+def merge_list(src1, src2):
+    lst1 = get_list(src1)
+    lst2 = get_list(src2)
+
+    ids = set()
+    for dic in lst1:
+        ids.add(dic['id'])
+
+    for dic in lst2:
+        if dic['id'] in ids:
+            continue
+        charts = dic['charts']
+        chart_files = map(lambda x: x['file'], charts)
+        for f in (dic['song'], dic['cover'], dic['preview'], *chart_files):
+            force_copy(os.path.join(src2, f), os.path.join(src1, f))
+        lst1.append(dic)
+    with open(os.path.join(src1, '__rena_index_2'), 'w') as f:
+        f.write(json_dict_to_list_file(lst1))
+    return lst1
 
 if __name__ == '__main__':
     import argparse
@@ -220,6 +255,10 @@ if __name__ == '__main__':
         return lst[index]
 
     lst_args = sys.argv[1:]
+
+    sort_parser = argparse.ArgumentParser(add_help=False)
+    sort_parser.add_argument('target', type=str)
+    sort_parser.add_argument('--rename', '-r', action='store_true')
 
     import_parser = argparse.ArgumentParser(add_help=False)
     import_parser.add_argument('source', type=str)
@@ -233,6 +272,9 @@ if __name__ == '__main__':
     remove_parser = argparse.ArgumentParser(add_help=False)
     remove_parser.add_argument('id', nargs='+', type=str)
 
+    merge_parser = argparse.ArgumentParser(add_help=False)
+    merge_parser.add_argument('source', nargs='+', type=str)
+
     command = get_arg(lst_args, 0)
     source = get_arg(lst_args, 1)
 
@@ -242,10 +284,10 @@ if __name__ == '__main__':
     rest_args = lst_args[2:]
 
     if command == 'sort':
-        target = get_arg(rest_args, 0)
-        if target is None:
-            target = os.path.abspath(os.curdir)
-        sort_dir(source, target)
+        sort_args = sort_parser.parse_args(rest_args)
+        target = sort_args.target
+        force_remove(target)
+        sort_dir(source, target, rename=sort_args.rename)
     elif command == 'list':
         lst = get_list(source)
         target_file = os.path.join(source, '__rena_index_2.json')
@@ -292,3 +334,10 @@ if __name__ == '__main__':
 
         with open(os.path.join(source, '__rena_index_2'), 'w') as f:
             f.write(json_dict_to_list_file(new_lst))
+    elif command == 'merge':
+        merge_args = merge_parser.parse_args(rest_args)
+
+        merges = merge_args.source
+        for src in merges:
+            merge_list(source, src)
+

@@ -97,3 +97,11 @@ python dynamite.py remove source id [id ...]
 ```
 
 To remove songs with specified IDs.
+
+### merge
+
+```shell
+python dynamite.py merge target source [source ...]
+```
+
+To merge source directory into target directory. Charts with identical ID will not be copied.
