@@ -314,7 +314,7 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('source', metavar='name', nargs=1, type=str, help='Android/data/com.c4cat.dynamix/files/UnityCache/Shared')
     parser.add_argument('song', metavar='name', nargs='?', default=None, type=str, help='The song to be extracted. Pass \'/\' to extract all songs. Show song list when not passed.')
