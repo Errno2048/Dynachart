@@ -12,6 +12,7 @@ def path_escape(s):
 
 _Re_list = re.compile(
     r'B\.(?P<id>.*)[\r\n]+'
+    r'(?P<hidden>Y\?1[\r\n]+|)'
     r'(?P<ranked>R\?1[\r\n]+|)'
     r'N\?(?P<name>.*)[\r\n]+'
     r'S\?(?P<song>.*)[\r\n]+'
@@ -25,10 +26,10 @@ _Re_list = re.compile(
     r'E\.'
 )
 
-_Re_difficulties = re.compile(r'(?P<name>[A-Za-z0-9]*),(?P<level>[A-Za-z0-9]*);')
+_Re_difficulties = re.compile(r'(?P<name>[A-Za-z0-9]*),(?P<level>[\-A-Za-z0-9]*);')
 _Re_charts = re.compile(r'(?P<file>[^;]*);')
 
-_Re_read_chart_dir_chart = re.compile(r'_(?P<diff>[BCNHMGbcnhmg])(?P<lv>_[0-9]+|)\.[Xx][Mm][Ll]$')
+_Re_read_chart_dir_chart = re.compile(r'_(?P<diff>[BCNHMGTbcnhmgt])(?P<lv>_[0-9]+|)\.[Xx][Mm][Ll]$')
 _Re_read_chart_dir_cover = re.compile(r'^(?:_o?)?cover')
 _Re_read_chart_dir_preview = re.compile(r'^_?preview')
 
