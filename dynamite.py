@@ -49,7 +49,7 @@ def _diff2lvname(s):
         return '6TERA'
     return '0TUTORIAL'
 
-def read_chart_dir(src, name, *, artist=None, charter=None, desc=None, id=None, ranked=False, with_dir=True):
+def read_chart_dir(src, name, *, artist=None, charter=None, desc=None, id=None, ranked=False, hidden=False, with_dir=True):
     files = os.listdir(src)
     dir_name = os.path.basename(src)
     charts = []
@@ -103,6 +103,7 @@ def read_chart_dir(src, name, *, artist=None, charter=None, desc=None, id=None, 
         return None
     return {
         'id': random_uuid() if id is None else id,
+        'hidden': hidden,
         'ranked': ranked,
         'name': song_name,
         'song': f'{dir_name}/{song}' if with_dir else song,
@@ -116,7 +117,7 @@ def read_chart_dir(src, name, *, artist=None, charter=None, desc=None, id=None, 
 
 def read_list(s):
     lst = []
-    for id_, ranked, name, song, cover, preview, charter, artist, desc, difficulties, charts in re.findall(_Re_list, s):
+    for id_, hidden, ranked, name, song, cover, preview, charter, artist, desc, difficulties, charts in re.findall(_Re_list, s):
         diffs = re.findall(_Re_difficulties, difficulties)
         charts = re.findall(_Re_charts, charts)
         if len(diffs) != len(charts):
@@ -131,6 +132,7 @@ def read_list(s):
             })
         json_dic = {
             'id': id_,
+            'hidden': bool(hidden),
             'ranked': bool(ranked),
             'name': name,
             'song': song,
@@ -173,6 +175,8 @@ def json_dict_to_list_file(lst):
     res = []
     for dic in lst:
         data = [f'B.{dic["id"]}']
+        if dic['hidden']:
+            data.append('Y?1')
         if dic['ranked']:
             data.append('R?1')
         data.append(f'N?{dic["name"]}')
@@ -206,7 +210,6 @@ def sort_out(lst, src, dst, rename=False):
         new_dic = dic.copy()
         id_ = _id_rename(dic) if rename else dic['id']
         new_dic['id'] = id_
-        name = dic['name']
         dst_folder = id_
         song, cover, preview = dic['song'], dic['cover'], dic['preview']
         charts = dic['charts']
@@ -287,6 +290,7 @@ if __name__ == '__main__':
     import_parser.add_argument('--charter', '-c', type=str, default=None)
     import_parser.add_argument('--desc', '-d', type=str, default=None)
     import_parser.add_argument('--ranked', '-r', action='store_true')
+    import_parser.add_argument('--hidden', '-r', action='store_true')
 
     remove_parser = argparse.ArgumentParser(add_help=False)
     remove_parser.add_argument('id', nargs='+', type=str)
@@ -344,7 +348,7 @@ if __name__ == '__main__':
                 ruuid = random_uuid()
         new_item = read_chart_dir(import_args.source, import_args.name, artist=import_args.artist,
                                   charter=import_args.charter, desc=import_args.desc, ranked=import_args.ranked,
-                                  id=ruuid)
+                                  hidden=import_args.hidden, id=ruuid)
         if new_item:
             basename = os.path.basename(import_args.source)
             target = os.path.join(source, basename)
