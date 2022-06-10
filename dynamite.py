@@ -200,7 +200,7 @@ def json_dict_to_list_file(lst):
     return '\n'.join(res)
 
 def _id_rename(dic):
-    return path_escape(f'{dic["name"]}_{dic["charter"]}')
+    return path_escape(f'{dic["name"]}({dic["charter"]})')
 
 def sort_out(lst, src, dst, rename=False):
     abs_src = os.path.abspath(src)
