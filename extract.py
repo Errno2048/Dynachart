@@ -313,6 +313,43 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
 
     return map_dict
 
+_Str_level_name = ['CASUAL', 'NORMAL', 'HARD', 'MEGA', 'GIGA']
+
+def rena_index_from_dic(dic, ranked=True, hidden=False, charter=None, desc=None):
+    _res = []
+    folder = dic["id"][6:]
+    _res.append(f'B.{dic["id"]}')
+    if hidden:
+        _res.append(f'Y?1')
+    if ranked:
+        _res.append(f'R?1')
+    _res.append(f'N?{dic["Name"]}')
+    _res.append(f'S?{folder}/{dic["file_song"]}')
+    _res.append(f'C?{folder}/{dic["file_cover"]}')
+    _res.append(f'P?{folder}/{dic["file_preview"]}')
+    if charter is None:
+        charter = '-'
+    if desc is None:
+        desc = ''
+    _res.append(f'U?{charter}')
+    _res.append(f'W?{dic["Author"]}')
+    _res.append(f'I?{desc}')
+    diffs = []
+    map_files = []
+    for map_dic in dic['Maps']:
+        level_name = map_dic['LevelName']
+        level_name = _Str_level_name[level_name]
+        level = map_dic['level']
+        diffs.append(f'{level_name},{level};')
+        mid = map_dic['id']
+        map_file = os.path.join(folder, f'{mid}_{level}.xml;')
+        map_files.append(map_file)
+    _res.append(f'H?{"".join(diffs)}')
+    _res.append(f'M?{"".join(map_files)}')
+    _res.append(f'E.')
+    res = '\n'.join(_res)
+    return f"{res}\n\n"
+
 if __name__ == '__main__':
     import argparse
 
@@ -355,6 +392,7 @@ if __name__ == '__main__':
                         lvs[lv] = _Map_level_desc[lv]
             if has_map:
                 print(f'{index}:{"".join(lvs)}:{id_name}:"{name}"')
+
     else:
         if song == '/':
             target = args.target
@@ -371,6 +409,7 @@ if __name__ == '__main__':
                 index = max(index - 1, 0)
                 songlist = songlist[index:]
             gen = tqdm(enumerate(songlist), total=len(songlist))
+            rena_index = []
             for index, song_info in gen:
                 _id = song_info['id']
                 id_name = _id[6:]
@@ -384,6 +423,10 @@ if __name__ == '__main__':
                         raise
                     print(f'Skipped {id_name}')
                     continue
+                song_info['file_song'] = res['song']['file']
+                song_info['file_cover'] = res['cover']['name'] + '.png'
+                song_info['file_preview'] = res['preview']['file']
+                rena_index.append(rena_index_from_dic(song_info))
                 if args.view:
                     for _res_map in res['maps']:
                         _map = _res_map['map']
@@ -392,6 +435,8 @@ if __name__ == '__main__':
                         board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
                         img = board.generate(chart)
                         img.save(os.path.join(target, id_name, _map['m_mapID'] + '.png'))
+            with open(os.path.join(target, '__rena_index_2'), 'w', encoding='utf8') as f:
+                f.write(''.join(rena_index))
         else:
             target = args.target
             if target is None:
