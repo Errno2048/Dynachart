@@ -8,7 +8,7 @@ def random_uuid():
     return str(uuid.uuid4()).replace('-', '')[:24].lower()
 
 def path_escape(s):
-    return re.sub(r'\t\\/:\*\?"<>\|', '', s)
+    return re.sub(r'\t\\/:\*\?"<>\|;', '', s)
 
 _Re_list = re.compile(
     r'B\.(?P<id>.*)[\r\n]+'
@@ -79,11 +79,11 @@ def read_chart_dir(src, name, *, artist=None, charter=None, desc=None, id=None, 
                 song = name
         elif _ext == '.rnx':
             subext = name[-9:-4]
-            if subext[0] == 'a':
-                song = name
-            elif subext[0] == 'b':
+            if subext[0] == 'b' or name.endswith('_preview.mp3.rnx'):
                 preview = name
-            elif subext[0] == 'c':
+            elif subext[0] == 'a' or name.endswith('.mp3.rnx'):
+                song = name
+            elif subext[0] == 'c' or name.endswith('.jpg.rnx'):
                 cover = name
             elif subext[1:] == '.xml':
                 lv = 0
@@ -219,7 +219,7 @@ def sort_out(lst, src, dst, rename=False):
             f = chart['file']
             chart_files.append(f)
             new_chart = chart.copy()
-            new_chart['file'] = f'{dst_folder}/{f}'
+            new_chart['file'] = f'{dst_folder}/{f};'
             new_charts.append(new_chart)
         path_dst = os.path.join(abs_dst, dst_folder)
         force_mkdir(path_dst)
@@ -290,7 +290,7 @@ if __name__ == '__main__':
     import_parser.add_argument('--charter', '-c', type=str, default=None)
     import_parser.add_argument('--desc', '-d', type=str, default=None)
     import_parser.add_argument('--ranked', '-r', action='store_true')
-    import_parser.add_argument('--hidden', '-r', action='store_true')
+    import_parser.add_argument('--hidden', '-h', action='store_true')
 
     remove_parser = argparse.ArgumentParser(add_help=False)
     remove_parser.add_argument('id', nargs='+', type=str)
