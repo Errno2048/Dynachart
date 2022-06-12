@@ -16,7 +16,7 @@ if __name__ == '__main__':
     parser.add_argument('--speed', '-S', type=float, default=0.8)
     parser.add_argument('--page-limit', '-l', type=int, default=16)
     parser.add_argument('--bar-span', '-b', type=int, default=2)
-    parser.add_argument('--semi-bar-span', '-B', type=float, default=1/8)
+    parser.add_argument('--semi-bar-span', '-B', type=float, default=1/16)
     parser.add_argument('--encoding', '-E', type=str, default='utf8')
     parser.add_argument('--verbose', '-v', action='store_true', default=False)
 

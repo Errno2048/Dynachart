@@ -153,7 +153,7 @@ class Board:
             if i % self.time_limit != 0:
                 draw.line([(x, y), (x + page_width, y)], fill=self.BAR_LINE_COLOR, width=self.BAR_LINE_WIDTH)
             if self.semi_bar_span and self.semi_bar_span > 0:
-                for j in np.arange(self.semi_bar_span / self.bar_span, self.bar_span, self.semi_bar_span / self.bar_span):
+                for j in np.arange(self.semi_bar_span, self.bar_span, self.semi_bar_span):
                     semi_y = y - bar_height * self.scale * j
                     draw.line([(x, semi_y), (x + page_width, semi_y)], fill=self.SEMI_BAR_LINE_COLOR, width=self.SEMI_BAR_LINE_WIDTH)
             time = round((i / chart.bar_per_min * 60 + chart.time_offset) * 1000)
