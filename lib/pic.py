@@ -1,5 +1,6 @@
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 from math import ceil
+import numpy as np
 
 class Note:
     SIDE_LEFT = -1
@@ -107,22 +108,25 @@ class Board:
     SIDE_LINE_WIDTH = 4
     BOTTOM_LINE_WIDTH = 6
     BAR_LINE_WIDTH = 2
+    SEMI_BAR_LINE_WIDTH = 2
     SPLIT_LINE_WIDTH = 8
 
     BACKGROUND_COLOR = (0, 0, 0, 255)
     LINE_COLOR = (255, 255, 255, 255)
-    BAR_LINE_COLOR = (127, 127, 127, 255)
+    BAR_LINE_COLOR = (255, 255, 255, 255)#(127, 127, 127, 255)
+    SEMI_BAR_LINE_COLOR = (127, 127, 127, 255)
     SPLIT_LINE_COLOR = (255, 255, 255, 255)
 
     FONT_SIZE = 96
     FONT_COLOR = (255, 255, 255, 255)
 
-    def __init__(self, scale=0.5, time_limit: int=32, speed = 0.5, bar_span = 4):
+    def __init__(self, scale=0.5, time_limit: int=32, speed = 0.5, bar_span = 4, semi_bar_span = None):
         self.scale = scale
         self.notes = []
         self.time_limit = round(time_limit)
         self.speed = speed
         self.bar_span = bar_span
+        self.semi_bar_span = semi_bar_span
 
     def generate(self, chart: Chart):
         board, args = self.draw_board(chart)
@@ -142,12 +146,16 @@ class Board:
         font = ImageFont.truetype('Fonts/arial.ttf', size=font_size)
 
         page_width, page_height, bar_height, bottom_line_y, side_line_leftside_x, side_line_left_x, side_line_right_x, side_line_rightside_x = args
-        for i in range(self.bar_span, pages * self.time_limit + self.bar_span, self.bar_span):
+        for i in range(0, pages * self.time_limit + self.bar_span, self.bar_span):
             pg = int(i / self.time_limit)
             x = page_width * pg
             y = bottom_line_y - bar_height * self.scale * (i - pg * self.time_limit)
             if i % self.time_limit != 0:
                 draw.line([(x, y), (x + page_width, y)], fill=self.BAR_LINE_COLOR, width=self.BAR_LINE_WIDTH)
+            if self.semi_bar_span and self.semi_bar_span > 0:
+                for j in np.arange(self.semi_bar_span / self.bar_span, self.bar_span, self.semi_bar_span / self.bar_span):
+                    semi_y = y - bar_height * self.scale * j
+                    draw.line([(x, semi_y), (x + page_width, semi_y)], fill=self.SEMI_BAR_LINE_COLOR, width=self.SEMI_BAR_LINE_WIDTH)
             time = round((i / chart.bar_per_min * 60 + chart.time_offset) * 1000)
             h = time // 3600000
             m = (time % 3600000) // 60000
