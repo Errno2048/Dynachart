@@ -345,7 +345,7 @@ def rena_index_from_dic(dic, ranked=True, hidden=False, charter=None, desc=None)
         level = map_dic['level']
         diffs.append(f'{level_name},{level};')
         mid = map_dic['id']
-        map_file = os.path.join(folder, f'{mid}_{level}.xml;')
+        map_file = f"{folder}/{mid}_{level}.xml;"
         map_files.append(map_file)
     _res.append(f'H?{"".join(diffs)}')
     _res.append(f'M?{"".join(map_files)}')
