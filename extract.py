@@ -311,7 +311,7 @@ def extract_clip(song_dict, src, dst, start_time, end_time, fade=4, level=None, 
     with open(f'{dst}/{map_id}_{map_level}.xml', 'w', encoding='utf8') as f:
         f.write(map_xml)
 
-    return map_dict
+    return map_dict, data
 
 _Str_level_name = ['CASUAL', 'NORMAL', 'HARD', 'MEGA', 'GIGA']
 
@@ -324,9 +324,12 @@ def rena_index_from_dic(dic, ranked=True, hidden=False, charter=None, desc=None)
     if ranked:
         _res.append(f'R?1')
     _res.append(f'N?{dic["Name"]}')
-    _res.append(f'S?{folder}/{dic["file_song"]}')
-    _res.append(f'C?{folder}/{dic["file_cover"]}')
-    _res.append(f'P?{folder}/{dic["file_preview"]}')
+    file_song = dic['file_song'][:-3] + 'mp3'
+    file_preview = dic['file_preview'][:-3] + 'mp3'
+    file_cover = dic['file_cover'] + '.png'
+    _res.append(f'S?{folder}/{file_song}')
+    _res.append(f'C?{folder}/{file_cover}')
+    _res.append(f'P?{folder}/{file_preview}')
     if charter is None:
         charter = '-'
     if desc is None:
@@ -424,7 +427,7 @@ if __name__ == '__main__':
                     print(f'Skipped {id_name}')
                     continue
                 song_info['file_song'] = res['song']['file']
-                song_info['file_cover'] = res['cover']['name'] + '.png'
+                song_info['file_cover'] = res['cover']['name']
                 song_info['file_preview'] = res['preview']['file']
                 rena_index.append(rena_index_from_dic(song_info))
                 if args.view:
@@ -464,10 +467,16 @@ if __name__ == '__main__':
                             img.save(os.path.join(target, _map['m_mapID'] + '.png'))
                 else:
                     clip_start, clip_end = args.clip
-                    _map = extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level, preserve_wav=preserve_wav)
+                    _map, res = extract_clip(s, src, target, clip_start, clip_end, fade=args.fade, align=args.align, level=args.level, preserve_wav=preserve_wav)
                     if args.view:
                         chart = read_dynamix(_map)
 
                         board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
                         img = board.generate(chart)
                         img.save(os.path.join(target, _map['m_mapID'] + '.png'))
+                s['file_song'] = res['song']['file']
+                s['file_cover'] = res['cover']['name']
+                s['file_preview'] = res['preview']['file']
+                rena_index = rena_index_from_dic(s)
+                with open(os.path.join(target, '__rena_index_2'), 'w', encoding='utf8') as f:
+                    f.write(rena_index)
