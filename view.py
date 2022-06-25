@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     parser.add_argument('files', metavar='name', nargs='*', type=str)
     #parser.add_argument('--type', '-t', choices=('dynamite', 'dynamix'), type=str, default=None)
-    parser.add_argument('--scale', '-s', type=float, default=0.4)
+    parser.add_argument('--scale', '-s', type=float, default=0.2)
     parser.add_argument('--speed', '-S', type=float, default=0.8)
     parser.add_argument('--page-limit', '-l', type=int, default=16)
     parser.add_argument('--bar-span', '-b', type=int, default=2)
@@ -44,8 +44,6 @@ if __name__ == '__main__':
             img = board.generate(chart)
             img.save(os.path.join(os.path.dirname(f), ftarget))
             if args.verbose:
-                print(f'Saved the overview to "{ftarget}".', file=sys.stderr)
-        except Exception:
-            if args.verbose:
-                print(f'Parsing "{f}" failed.', file=sys.stderr)
-            pass
+                print(f'Overview saved to "{ftarget}".', file=sys.stderr)
+        except Exception as e:
+            print(f'Parsing "{f}" failed: {e}.', file=sys.stderr)

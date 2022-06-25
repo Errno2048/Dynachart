@@ -4,6 +4,8 @@ import json
 
 import uuid
 
+from lib.fileutils import *
+
 def random_uuid():
     return str(uuid.uuid4()).replace('-', '')[:24].lower()
 
@@ -145,31 +147,6 @@ def read_list(s):
         }
         lst.append(json_dic)
     return lst
-
-def force_mkdir(path):
-    if os.path.exists(path):
-        if os.path.isfile(path):
-            os.remove(path)
-        else:
-            return
-    os.makedirs(path)
-
-def force_remove(path):
-    if os.path.isfile(path):
-        os.remove(path)
-    elif os.path.isdir(path):
-        shutil.rmtree(path)
-
-def force_copy(src, dst):
-    if not os.path.exists(src):
-        return
-    parent_dir = os.path.dirname(os.path.abspath(dst))
-    force_mkdir(parent_dir)
-    force_remove(dst)
-    if os.path.isfile(src):
-        shutil.copyfile(src, dst)
-    else:
-        shutil.copytree(src, dst)
 
 def json_dict_to_list_file(lst):
     res = []
