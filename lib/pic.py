@@ -238,12 +238,15 @@ class Board:
             if note.type == Note.NOTE_HOLD:
                 end_page_number = int(note.end / self.time_limit)
             img = note.generate_image(round(width_per_unit), round(bar_height), scale=self.scale)
+
+            WIDTH_HOLD_2 = max(1, round(self.scale * Note.WIDTH_HOLD / 2))
+
             if page_number == end_page_number:
                 x += page_number * page_width
                 y = bottom_line_y - (note.start - page_number * self.time_limit) * bar_height
                 realx = round(x - img.width / 2)
                 if note.type == Note.NOTE_HOLD:
-                    realy = round(y - img.height + Note.WIDTH_HOLD / 2)
+                    realy = round(y - img.height + WIDTH_HOLD_2)
                 else:
                     realy = round(y - img.height / 2)
                 if note.type == Note.NOTE_HOLD:
@@ -252,9 +255,9 @@ class Board:
                     board_front.paste(img, (realx, realy), mask=img)
             else:
                 cap_y = board.height - bottom_line_y
-                end_y = round(bottom_line_y - (note.end - end_page_number * self.time_limit) * bar_height - Note.WIDTH_HOLD / 2)
-                start_clip = round(((page_number + 1) * self.time_limit - note.start) * bar_height + Note.WIDTH_HOLD / 2)
-                end_clip = round((note.end - end_page_number * self.time_limit) * bar_height + Note.WIDTH_HOLD / 2)
+                end_y = round(bottom_line_y - (note.end - end_page_number * self.time_limit) * bar_height - WIDTH_HOLD_2)
+                start_clip = round(((page_number + 1) * self.time_limit - note.start) * bar_height + WIDTH_HOLD_2)
+                end_clip = round((note.end - end_page_number * self.time_limit) * bar_height + WIDTH_HOLD_2)
                 start_crop = img.crop((0, img.height - start_clip, img.width, img.height))
                 end_crop = img.crop((0, 0, img.width, end_clip))
                 board.paste(start_crop, (round(x + page_number * page_width - img.width / 2), cap_y), mask=start_crop)
