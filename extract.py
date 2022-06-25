@@ -435,7 +435,7 @@ if __name__ == '__main__':
                         _map = _res_map['map']
                         chart = read_dynamix(_map)
 
-                        board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
+                        board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2, semi_bar_span=1/16)
                         img = board.generate(chart)
                         img.save(os.path.join(target, id_name, _map['m_mapID'] + '.png'))
             with open(os.path.join(target, '__rena_index_2'), 'w', encoding='utf8') as f:
@@ -462,7 +462,7 @@ if __name__ == '__main__':
                             _map = _res_map['map']
                             chart = read_dynamix(_map)
 
-                            board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
+                            board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2, semi_bar_span=1/16)
                             img = board.generate(chart)
                             img.save(os.path.join(target, _map['m_mapID'] + '.png'))
                 else:
@@ -471,7 +471,7 @@ if __name__ == '__main__':
                     if args.view:
                         chart = read_dynamix(_map)
 
-                        board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2)
+                        board = Board(scale=0.4, time_limit=16, speed=0.8, bar_span=2, semi_bar_span=1/16)
                         img = board.generate(chart)
                         img.save(os.path.join(target, _map['m_mapID'] + '.png'))
                 s['file_song'] = res['song']['file']

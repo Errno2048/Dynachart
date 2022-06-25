@@ -120,7 +120,7 @@ class Board:
     FONT_SIZE = 96
     FONT_COLOR = (255, 255, 255, 255)
 
-    def __init__(self, scale=0.5, time_limit: int=32, speed = 0.5, bar_span = 4, semi_bar_span = None):
+    def __init__(self, scale=0.5, time_limit: int=32, speed = 0.5, bar_span = 2, semi_bar_span = 1 / 16):
         self.scale = scale
         self.notes = []
         self.time_limit = round(time_limit)
