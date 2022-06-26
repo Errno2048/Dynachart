@@ -1,6 +1,7 @@
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 from math import ceil
 import numpy as np
+from .dynamix2dynamite import convert_json
 
 class Note:
     SIDE_LEFT = -1
@@ -46,6 +47,12 @@ class Note:
         else:
             self.end = max(start, end)
 
+    def clone(self):
+        note = Note(0, 0, self.side, self.type, self.start, self.end)
+        note.pos = self.pos
+        note.width = self.width
+        return note
+
     def generate_image(self, width_per_unit, bar_height, scale=1.0):
         fill_color = self.COLOR_NORMAL
         outline_color = None
@@ -76,13 +83,128 @@ class Note:
         return img
 
 class Chart:
+    @classmethod
+    def concatenate(cls, former_chart, latter_chart, song_length_sec):
+        return former_chart.clone().concat(latter_chart, song_length_sec)
+
     def __init__(self):
+        self.name = None
+        self.map_id = None
         self.notes = []
         self.time = 0.0
         self.left_slide = False
         self.right_slide = False
         self.bar_per_min = 0.0
         self.time_offset = 0.0
+
+    def clone(self):
+        new_chart = Chart()
+        new_chart.name = self.name
+        new_chart.map_id = self.map_id
+        new_chart.time = self.time
+        new_chart.left_slide = self.left_slide
+        new_chart.right_slide = self.right_slide
+        new_chart.time_offset = self.time_offset
+        new_chart.bar_per_min = self.bar_per_min
+        for note in self.notes:
+            new_chart.notes.append(note.clone())
+        return new_chart
+
+    def concat(self, other, song_length_sec):
+        other = other.change_bpm(self.bar_per_min)
+        time_offset = song_length_sec - self.time_offset + other.time_offset
+        bar_offset = self.bar_per_min * time_offset / 60
+        note_id = -1
+        for note in self.notes:
+            note_id = max(note.id, note_id)
+        note_id += 1
+        for note in other.notes:
+            note.start += bar_offset
+            note.end += bar_offset
+            self.time = max(self.time, note.end)
+        self.notes.extend(other.notes)
+        return self
+
+    def change_bpm(self, new_bpm):
+        new_chart = self.clone()
+        new_chart.bar_per_min = new_bpm
+        for note in new_chart.notes:
+            note.start = new_bpm * note.start / self.bar_per_min
+            note.end = new_bpm * note.end / self.bar_per_min
+        return new_chart
+
+    def to_dict(self):
+        m_notes = []
+        m_notesLeft = []
+        m_notesRight = []
+        data = {
+            'm_Name': self.name,
+            'm_mapID': self.map_id,
+            'm_barPerMin': self.bar_per_min,
+            'm_timeOffset': self.time_offset,
+            'm_leftRegion': 1 if self.left_slide else 2,
+            'm_rightRegion': 1 if self.right_slide else 2,
+            'm_notes': {
+                'm_notes': m_notes,
+            },
+            'm_notesLeft': {
+                'm_notes': m_notesLeft,
+            },
+            'm_notesRight': {
+                'm_notes': m_notesRight,
+            },
+        }
+        note_id = 0
+        for note in self.notes:
+            if note.type == Note.NOTE_CHAIN:
+                typ = 1
+            elif note.type == Note.NOTE_HOLD:
+                typ = 2
+            elif note.type == Note.NOTE_NORMAL:
+                typ = 0
+            else:
+                typ = 0
+            pos = note.pos - note.width / 2
+            note_dict = {
+                'm_id': note_id,
+                'm_type': typ,
+                'm_time': note.start,
+                'm_position': pos,
+                'm_width': note.width,
+                'm_subId': note_id + 1 if typ == 2 else -1,
+            }
+            note_id += 1
+            if note.side == Note.SIDE_FRONT:
+                m_notes.append(note_dict)
+            elif note.side == Note.SIDE_LEFT:
+                m_notesLeft.append(note_dict)
+            elif note.side == Note.SIDE_RIGHT:
+                m_notesRight.append(note_dict)
+            else:
+                m_notes.append(note_dict)
+            if typ == 2:
+                note_dict = {
+                    'm_id': note_id,
+                    'm_type': 3,
+                    'm_time': note.end,
+                    'm_position': pos,
+                    'm_width': note.width,
+                    'm_subId': -1,
+                }
+                note_id += 1
+                if note.side == Note.SIDE_FRONT:
+                    m_notes.append(note_dict)
+                elif note.side == Note.SIDE_LEFT:
+                    m_notesLeft.append(note_dict)
+                elif note.side == Note.SIDE_RIGHT:
+                    m_notesRight.append(note_dict)
+                else:
+                    m_notes.append(note_dict)
+        return data
+
+    def to_xml(self):
+        return convert_json(self.to_dict())
+
 
 class Board:
     SIDE_BORDER = -0.2
