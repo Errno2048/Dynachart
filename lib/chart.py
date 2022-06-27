@@ -110,19 +110,58 @@ class Chart:
             new_chart.notes.append(note.clone())
         return new_chart
 
+    def move(self, bar_offset):
+        for note in self.notes:
+            note.start = note.start + bar_offset
+            note.end = note.end + bar_offset
+        self.time = self.time + bar_offset
+        return self
+
+    def clip(self, start, end):
+        res = self.clone()
+        res.time = end - start
+        new_notes = []
+        for note in res.notes:
+            if note.type == Note.NOTE_HOLD:
+                if start <= note.start:
+                    if end >= note.end:
+                        new_notes.append(note)
+                    elif end == note.start:
+                        note.type = Note.NOTE_NORMAL
+                        note.end = end
+                        new_notes.append(note)
+                    elif end > note.start:
+                        note.end = end
+                        new_notes.append(note)
+                else:
+                    if start == note.end:
+                        note.type = Note.NOTE_CHAIN
+                        note.start = start
+                        new_notes.append(note)
+                    elif start < note.end:
+                        note.start = start
+                        note.end = min(end, note.end)
+                        new_notes.append(note)
+            else:
+                if start <= note.start and note.start <= end:
+                    new_notes.append(note)
+        for note in new_notes:
+            note.start -= start
+            note.end -= start
+        res.notes = new_notes
+        return res
+
     def concat(self, other, song_length_sec):
         other = other.change_bpm(self.bar_per_min)
-        time_offset = song_length_sec - self.time_offset + other.time_offset
+        time_offset = song_length_sec + self.time_offset - other.time_offset
         bar_offset = self.bar_per_min * time_offset / 60
-        note_id = -1
-        for note in self.notes:
-            note_id = max(note.id, note_id)
-        note_id += 1
         for note in other.notes:
             note.start += bar_offset
             note.end += bar_offset
             self.time = max(self.time, note.end)
         self.notes.extend(other.notes)
+        self.left_slide = self.left_slide and other.left_slide
+        self.right_slide = self.right_slide and other.right_slide
         return self
 
     def change_bpm(self, new_bpm):
@@ -131,6 +170,12 @@ class Chart:
         for note in new_chart.notes:
             note.start = new_bpm * note.start / self.bar_per_min
             note.end = new_bpm * note.end / self.bar_per_min
+        return new_chart
+
+    def change_speed(self, speed=1.0):
+        new_chart = self.clone()
+        new_chart.bar_per_min = self.bar_per_min * speed
+        new_chart.time_offset = self.time_offset / speed
         return new_chart
 
     def to_dict(self):
@@ -203,7 +248,131 @@ class Chart:
         return data
 
     def to_xml(self):
-        return convert_json(self.to_dict())
+        return convert_json(self.to_dict())[0]
+
+
+import pydub
+
+class AudioFile:
+    @classmethod
+    def from_file(cls, path : str, format : str = None):
+        seg = pydub.AudioSegment.from_file(path, format=format)
+        return cls.from_audio_segment(seg)
+
+    @classmethod
+    def from_audio_segment(cls, audio_segment : pydub.AudioSegment):
+        res = cls()
+        array = audio_segment.get_array_of_samples()
+        res.sample_width = audio_segment.sample_width
+        res.data = np.array(array).reshape(-1, audio_segment.channels)
+        res.sample_rate = audio_segment.frame_rate
+        return res
+
+    def __init__(self):
+        self.data = None
+        self.sample_rate = None
+        self.sample_width = None
+
+    def clone(self):
+        res = AudioFile()
+        res.data = self.data.copy()
+        res.sample_rate = self.sample_rate
+        res.sample_width = self.sample_width
+        return res
+
+    @property
+    def valid(self):
+        return self.data is not None
+
+    @property
+    def duration(self):
+        if not self.valid:
+            return -1
+        return self.data.shape[0] / self.sample_rate
+
+    def clip(self, start : float, end : float):
+        if not self.valid:
+            return None
+        sz = self.data.shape[0]
+        start = min(sz, max(0, round(start * self.sample_rate)))
+        end = min(sz, max(0, round(end * self.sample_rate)))
+        new_audio = AudioFile()
+        new_audio.sample_rate = self.sample_rate
+        new_audio.data = self.data[start : end, ...]
+        new_audio.sample_width = self.sample_width
+        return new_audio
+
+    def set_sample_rate(self, sample_rate):
+        aus = self.to_audio_segment()
+        aus.set_frame_rate(sample_rate)
+        new = self.__class__.from_audio_segment(aus)
+        self.data = new.data
+        self.sample_rate = sample_rate
+        return self
+
+    def concat(self, audio):
+        audio : AudioFile
+        if audio.sample_rate != self.sample_rate:
+            audio = audio.clone().set_sample_rate(self.sample_rate)
+        channels = self.data.shape[-1]
+        audio_channels = audio.data.shape[-1]
+        data = audio.data
+        if channels < audio_channels:
+            self.data = self.data.repeat(2, axis=1)
+        elif audio_channels < channels:
+            data = data.repeat(2, axis=1)
+        self.data = np.concatenate([self.data, data], axis=0)
+        self.sample_width = max(self.sample_width, audio.sample_width)
+        return self
+
+    def linear_transform(self, start : float, end : float, start_amp : float, end_amp : float):
+        if not self.valid:
+            return self
+        sz = self.data.shape[0]
+        start = min(sz, max(0, round(start * self.sample_rate)))
+        end = min(sz, max(0, round(end * self.sample_rate)))
+        transform = np.linspace(start_amp, end_amp, end - start).reshape(-1, 1)
+        self.data[start : end, ...] = self.data[start : end, ...] * transform
+        return self
+
+    def fade_in(self, start : float, end : float):
+        return self.linear_transform(start, end, 0.0, 1.0)
+
+    def fade_out(self, start: float, end: float):
+        return self.linear_transform(start, end, 1.0, 0.0)
+
+    def to_audio_segment(self):
+        return pydub.AudioSegment(self.data.reshape(-1).tobytes(), frame_rate=self.sample_rate, sample_width=self.sample_width, channels=self.data.shape[-1])
+
+    def to(self, path : str, format=None):
+        path = str(path)
+        mp3 = False
+        if format is None:
+            dot = path.rfind('.')
+            if dot >= 0:
+                format = path[dot + 1:]
+                if format == 'mp3':
+                    mp3 = True
+            else:
+                format = 'mp3'
+                mp3 = True
+        elif format == 'mp3':
+            mp3 = True
+        aus = self.to_audio_segment()
+        if mp3:
+            parameters = ["-write_xing", "0"]
+        else:
+            parameters = []
+        aus.export(path, format=format, parameters=parameters)
+
+
+class Song:
+    def __init__(self):
+        self.name : str = None
+        self.song : AudioFile = None
+        self.preview : AudioFile = None
+        self.charts = []
+        self.cover : Image.Image = None
 
 
 class Board:
@@ -280,7 +449,7 @@ class Board:
                 for j in np.arange(self.semi_bar_span, self.bar_span, self.semi_bar_span):
                     semi_y = y - bar_height * self.scale * j
                     draw.line([(x, semi_y), (x + page_width, semi_y)], fill=self.SEMI_BAR_LINE_COLOR, width=max(1, round(self.scale * self.SEMI_BAR_LINE_WIDTH)))
-            time = round((i / chart.bar_per_min * 60 + chart.time_offset) * 1000)
+            time = round((i / chart.bar_per_min * 60 - chart.time_offset) * 1000)
             h = time // 3600000
             m = (time % 3600000) // 60000
             s = (time % 60000) // 1000

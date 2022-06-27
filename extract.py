@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from lib.dynamix2dynamite import convert_json
 from lib.reader import read_dynamix
-from lib.pic import Board
+from lib.chart import Board
 
 def wav_file_clip(path, start, end, fadein=None, fadeout=None, sr=None):
     audio, sample_rate = librosa.load(path, sr=sr)

@@ -1,5 +1,5 @@
 from lib.reader import *
-from lib.pic import Board
+from lib.chart import Board
 import json
 from xml.etree import ElementTree
 

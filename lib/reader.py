@@ -1,5 +1,4 @@
-from lib import pic
-from lib.pic import Note
+from .chart import Note, Chart
 import math
 from xml.etree import ElementTree
 import json
@@ -40,7 +39,7 @@ def _read_notes(notes, matched, side):
     return max_time
 
 def read_dynamite(s):
-    chart = pic.Chart()
+    chart = Chart()
     xml = ElementTree.fromstring(s)
 
     name = xml.find('m_path').text
@@ -105,7 +104,7 @@ def read_dynamix(s : dict):
     if not isinstance(s, dict):
         s = json.loads(str(s))
 
-    chart = pic.Chart()
+    chart = Chart()
     name = s['m_Name']
     barpermin = s['m_barPerMin']
     timeoffset = s['m_timeOffset']
