@@ -113,6 +113,21 @@ def clip(song, diff, start, end, fade=None):
     new_song.charts = [(new_chart, diff, lv)]
     return new_song
 
+def time_stretch(song, speed):
+    new_audio : AudioFile = song.song.clone().time_stretch(speed)
+    new_charts = []
+    for chart, *_ in song.charts:
+        new_chart : Chart = chart.change_speed(speed)
+        new_charts.append((new_chart, *_))
+
+    new_song = Song()
+    new_song.name = song.name
+    new_song.cover = song.cover
+    new_song.preview = song.preview
+    new_song.song = new_audio
+    new_song.charts = new_charts
+    return new_song
+
 if __name__ == '__main__':
     import argparse, sys
 
@@ -160,9 +175,27 @@ if __name__ == '__main__':
                             help='End bar time.')
         parser.add_argument('--fade', '-f', metavar='bar', type=float, default=1.0,
                             help='To apply fade in and fade out.')
+        parser.add_argument('--level', '-l', metavar='lv', type=str, default=None,
+                            help='The chart level to be clipped. The highest level will be automatically chosen if not provided.')
 
         args = parser.parse_args(lst_args[1:])
 
         song = read_dir(args.source)
-        res = clip(song, None, args.start, args.end, args.fade)
+        res = clip(song, args.level, args.start, args.end, args.fade)
+        write_dir(args.target, res)
+
+    elif command == 'time':
+        command_parser = argparse.ArgumentParser()
+
+        parser.add_argument('target', metavar='path', type=str,
+                            help='Target directory.')
+        parser.add_argument('source', metavar='path', type=str,
+                            help='Source directory.')
+        parser.add_argument('--speed', '-s', metavar='rate', type=float, default=21 / 18,
+                            help='Speedup rate.')
+
+        args = parser.parse_args(lst_args[1:])
+
+        song = read_dir(args.source)
+        res = time_stretch(song, args.speed)
         write_dir(args.target, res)

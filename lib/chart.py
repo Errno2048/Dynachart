@@ -252,6 +252,7 @@ class Chart:
 
 
 import pydub
+import librosa
 
 class AudioFile:
     @classmethod
@@ -289,6 +290,26 @@ class AudioFile:
         if not self.valid:
             return -1
         return self.data.shape[0] / self.sample_rate
+
+    def time_stretch(self, rate=1.0):
+        sw = 1 << (self.sample_width * 8)
+        dtype = self.data.dtype
+        channels = []
+        for i in range(self.data.shape[-1]):
+            channel = librosa.effects.time_stretch(self.data[:, i] / sw, rate=rate) * sw
+            channels.append(channel)
+        self.data = np.stack(channels, axis=1).astype(dtype)
+        return self
+
+    def pitch_shift(self, steps=0.0):
+        sw = 1 << (self.sample_width * 8)
+        dtype = self.data.dtype
+        channels = []
+        for i in range(self.data.shape[-1]):
+            channel = librosa.effects.pitch_shift(self.data[:, i] / sw, sr=self.sample_rate, n_steps=steps) * sw
+            channels.append(channel)
+        self.data = np.stack(channels, axis=1).astype(dtype)
+        return self
 
     def clip(self, start : float, end : float):
         if not self.valid:
