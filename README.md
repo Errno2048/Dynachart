@@ -48,6 +48,8 @@ To generate overview picture `hemisphere.png` for the chart `hemisphere.xml`.
 
 The Dynamix extractor. Use `python extract.py --help` to show help.
 
+Please install ffmpeg and add `ffmpeg.exe` into `PATH` before extraction.
+
 ## dynamite.py
 
 The Dynamite list editor.
