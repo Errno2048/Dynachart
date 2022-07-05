@@ -40,8 +40,15 @@ def wav_file_clip(path, start, end, fadein=None, fadeout=None, sr=None):
 
 def get_source_file(folder):
     dirs = os.listdir(folder)
-    assert len(dirs) == 1
-    file = f'{folder}/{dirs[0]}/__data'
+    assert len(dirs) >= 1
+    t = -float('inf')
+    file = None
+    for f in dirs:
+        _t = os.path.getctime(os.path.join(folder, f))
+        if _t > t:
+            t = _t
+            file = f
+    file = f'{folder}/{file}/__data'
     return file
 
 def get_songlist(folder):
@@ -116,6 +123,24 @@ def extract_map(path):
             if 'm_notes' in obj:
                 return obj
     assert False, f'Cannot find MonoBehaviour with m_notes in {path}'
+
+from UnityPy.enums.SpritePackingRotation import SpritePackingRotation
+
+def extract_sprites(path, fix_horizontal=False):
+    file = get_source_file(path)
+    src = unity.load(file)
+    res = []
+    for obj in src.objects:
+        if obj.type.name == 'Sprite':
+            obj = obj.read()
+            if fix_horizontal:
+                rot = obj.m_RD.settingsRaw.packingRotation
+                if rot == SpritePackingRotation.kSPRFlipHorizontal:
+                    obj.m_RD.settingsRaw.packingRotation = SpritePackingRotation.kSPRFlipVertical
+                elif rot == SpritePackingRotation.kSPRFlipVertical:
+                    obj.m_RD.settingsRaw.packingRotation = SpritePackingRotation.kSPRFlipHorizontal
+            res.append((obj.name, obj.image))
+    return res
 
 def extract(song_dict, src, dst, preserve_wav=False, generate=True):
     if generate:

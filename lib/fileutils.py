@@ -6,7 +6,7 @@ def force_mkdir(path):
             _os.remove(path)
         else:
             return
-    _os.makedirs(path)
+    _os.makedirs(path, exist_ok=True)
 
 def force_remove(path):
     if _os.path.isfile(path):

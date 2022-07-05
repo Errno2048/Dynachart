@@ -1,10 +1,14 @@
 import os
 from pathlib import Path
 import re
+import uuid
 from PIL import Image
 
 from lib.chart import Chart, Song, AudioFile
 from lib.reader import read
+
+def random_uuid():
+    return str(uuid.uuid4()).replace('-', '').lower()
 
 _Re_preview = re.compile(r'^_?preview', flags=re.IGNORECASE)
 _Re_cover = re.compile(r'^_?o?cover', flags=re.IGNORECASE)
@@ -20,7 +24,7 @@ _Diff_lut = {
     't': '7Tera',
 }
 
-def read_dir(path):
+def read_dir(path, read_json=False):
     path = Path(path)
     song = Song()
     song.name = path.name
@@ -33,6 +37,8 @@ def read_dir(path):
         elif re.search(_Re_cover, file):
             song.cover = Image.open(path / file)
         elif (m := re.search(_Re_chart, file)):
+            if not read_json and file[-4:].lower() == 'json':
+                continue
             diff, lv = m.groups()
             diff = _Diff_lut.get(diff.lower(), _Diff_lut['b'])
             if lv:
@@ -47,25 +53,50 @@ def read_dir(path):
         song.charts.append((chart, diff[1:], lv))
     return song
 
-def write_dir(path, song : Song):
+def write_dir(path, song : Song, save_to_parent=False):
     path = Path(path)
     os.makedirs(path, exist_ok=True)
     song.cover.save(path / f'_cover_{song.name}.png')
     song.preview.to(path / f'_preview_{song.name}.mp3')
     song.song.to(path / f'{song.name}.mp3')
+    diffs = []
+    chart_files = []
     for chart, diff, lv in song.charts:
+        diffs.append(f'{diff},{lv};')
+        chart_file = f'{song.name}_{diff[0]}_{lv}.xml'
+        chart_files.append(f'{path.name}/{chart_file};')
         chart_raw = chart.to_xml()
-        with open(path / f'{song.name}_{diff[0]}_{lv}.xml', 'w') as f:
+        with open(path / chart_file, 'w') as f:
             f.write(chart_raw)
+    rena_index = f"""B.{random_uuid()}
+N?{song.name}
+S?{path.name}/{song.name}.mp3
+C?{path.name}/_cover_{song.name}.png
+P?{path.name}/_preview_{song.name}.mp3
+U?-
+W?-
+I?
+H?{''.join(diffs)}
+M?{''.join(chart_files)}
+E.
+
+"""
+    if save_to_parent:
+        open_args = path.parent / '__rena_index_2', 'a'
+    else:
+        open_args = path / '__rena_index_2', 'w'
+    with open(*open_args) as f:
+        f.write(rena_index)
 
 def _chart_from_song(song, diff):
     chart, new_diff, new_lv = song.charts[-1]
     if isinstance(diff, str):
-        for chart, diff, lv in song.charts:
-            if diff.lower().startswith(diff.lower()):
+        for chart, _diff, lv in song.charts:
+            if _diff.lower().startswith(diff.lower()):
                 chart = chart
-                new_diff = diff
+                new_diff = _diff
                 new_lv = lv
+                break
     elif isinstance(diff, int):
         chart, new_diff, new_lv = song.charts[diff]
     return chart, new_diff, new_lv
@@ -149,6 +180,8 @@ if __name__ == '__main__':
                             help='Target directory.')
         parser.add_argument('source', metavar='path', type=str, nargs='+',
                             help='Source directories.')
+        parser.add_argument('--save-to-parent', '-p', action='store_true',
+                            help='To append song info to __rena_index_2 in the parent directory.')
 
         args = parser.parse_args(lst_args[1:])
 
@@ -160,7 +193,7 @@ if __name__ == '__main__':
         for song in songs[1:]:
             res = concat(res, song)
 
-        write_dir(args.target, res)
+        write_dir(args.target, res, save_to_parent=args.save_to_parent)
 
     elif command == 'clip':
         command_parser = argparse.ArgumentParser()
@@ -177,12 +210,14 @@ if __name__ == '__main__':
                             help='To apply fade in and fade out.')
         parser.add_argument('--level', '-l', metavar='lv', type=str, default=None,
                             help='The chart level to be clipped. The highest level will be automatically chosen if not provided.')
+        parser.add_argument('--save-to-parent', '-p', action='store_true',
+                            help='To append song info to __rena_index_2 in the parent directory.')
 
         args = parser.parse_args(lst_args[1:])
 
         song = read_dir(args.source)
         res = clip(song, args.level, args.start, args.end, args.fade)
-        write_dir(args.target, res)
+        write_dir(args.target, res, save_to_parent=args.save_to_parent)
 
     elif command == 'time':
         command_parser = argparse.ArgumentParser()
@@ -191,11 +226,14 @@ if __name__ == '__main__':
                             help='Target directory.')
         parser.add_argument('source', metavar='path', type=str,
                             help='Source directory.')
-        parser.add_argument('--speed', '-s', metavar='rate', type=float, default=21 / 18,
+        parser.add_argument('speed', metavar='rate', type=float, default=21 / 18,
                             help='Speedup rate.')
+        parser.add_argument('--save-to-parent', '-p', action='store_true',
+                            help='To append song info to __rena_index_2 in the parent directory.')
 
         args = parser.parse_args(lst_args[1:])
 
         song = read_dir(args.source)
         res = time_stretch(song, args.speed)
-        write_dir(args.target, res)
+        res.name = f'{res.name} {args.speed:.03f}'
+        write_dir(args.target, res, save_to_parent=args.save_to_parent)
