@@ -17,10 +17,10 @@ class Note:
     COLOR_HOLD_BOARD = (255, 255, 128, 255)
     COLOR_HOLD_FILL = (70, 134, 0, 255)
 
-    WIDTH_NORMAL = 40
-    WIDTH_CHAIN = 20
-    WIDTH_HOLD = 40
-    WIDTH_MIN = 20
+    WIDTH_NORMAL = 32
+    WIDTH_CHAIN = 14
+    WIDTH_HOLD = 32
+    WIDTH_MIN = 14
 
     def __lt__(self, other):
         res = self.start - other.start
@@ -397,7 +397,7 @@ class Song:
 
 
 class Board:
-    SIDE_BORDER = -0.2
+    SIDE_BORDER = -0.3#-0.2
     SIDE_CAP = 6.1
     SIDE_LIMIT = -1.1
 
@@ -413,10 +413,12 @@ class Board:
     FRONT_VISIBLE_RIGHT_LIMIT = 5.7#6.1
 
     FRONT_BOARD_RATE = 2.0
-    FRONT_NOTE_RATE = 2.25
+    FRONT_NOTE_RATE = 2.0#2.25
 
-    NOTE_SIZE = 100 # size 1 to pixels
-    BOARD_SIZE = 150 # size 1 to pixels
+    NOTE_SIZE = 129
+    # NOTE_SIZE = 100 # size 1 to pixels
+    BOARD_SIZE = 149 # size 1 to pixels
+    # BOARD_SIZE = 150 # size 1 to pixels
     TIME_SIZE = 2880  # bar size
 
     SIDE_LINE_WIDTH = 10
@@ -539,6 +541,7 @@ class Board:
             width_per_unit = self.NOTE_SIZE * self.scale
             if side == Note.SIDE_FRONT:
                 width_per_unit *= self.FRONT_NOTE_RATE
+                
             if side == Note.SIDE_LEFT:
                 x = (self.SIDE_VISIBLE_CAP - note.pos) * self.BOARD_SIZE * self.scale
             elif side == Note.SIDE_FRONT:
